@@ -7,6 +7,12 @@ from typing import Optional
 
 from .base import ConversionError
 
+VORBIS_QUALITY = "6"
+MP3_QUALITY = "0"
+H264_CRF = "15"
+H264_PRESET = "slow"
+AAC_BITRATE = "320k"
+
 
 def get_ffmpeg_exe() -> str:
     try:
