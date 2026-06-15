@@ -8,7 +8,9 @@ from conversions import ALL_CONVERSIONS, ConversionError, get_conversion
 
 
 def print_usage() -> None:
-    print("Usage: convert <from> <to> <path\\to\\file>")
+    print("Usage:")
+    print("  convert <from> <to> <path\\to\\file>")
+    print("  convert <to> <path\\to\\file>        (from is guessed from the file extension)")
     print()
     print("Supported conversions:")
     for conversion in ALL_CONVERSIONS:
@@ -17,6 +19,20 @@ def print_usage() -> None:
             f"  convert {conversion.source} {conversion.target} "
             f"C:\\path\\to\\{example}"
         )
+
+
+def parse_args(argv: list[str]) -> tuple[str, str, str] | None:
+    """Return (source, target, path) from argv, or None if the arg count is wrong."""
+    if len(argv) == 4:
+        return argv[1], argv[2], argv[3]
+    if len(argv) == 3:
+        path = argv[2]
+        suffix = Path(path).suffix.lower()
+        if not suffix:
+            raise ConversionError("can't tell format from filename")
+        source = suffix.lstrip(".")
+        return source, argv[1], path
+    return None
 
 
 def resolve_source(path_arg: str, expected_ext: str) -> Path:
@@ -29,19 +45,26 @@ def resolve_source(path_arg: str, expected_ext: str) -> Path:
 
 
 def main() -> int:
-    if len(sys.argv) != 4:
+    try:
+        parsed = parse_args(sys.argv)
+    except ConversionError as exc:
+        print(f"Error: {exc}")
+        return 1
+
+    if parsed is None:
         print_usage()
         return 1
 
-    conversion = get_conversion(sys.argv[1], sys.argv[2])
+    source, target, path_arg = parsed
+    conversion = get_conversion(source, target)
     if conversion is None:
-        print(f"Error: unsupported conversion: {sys.argv[1]} -> {sys.argv[2]}")
+        print(f"Error: no conversion from {source} to {target}")
         print()
         print_usage()
         return 1
 
     try:
-        src = resolve_source(sys.argv[3], conversion.source_ext)
+        src = resolve_source(path_arg, conversion.source_ext)
         dst = src.with_suffix(conversion.target_ext)
         if dst.exists():
             dst.unlink()
